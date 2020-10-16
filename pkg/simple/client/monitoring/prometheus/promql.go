@@ -389,8 +389,8 @@ func makePVCMetricExpr(tmpl string, o monitoring.QueryOptions) string {
 	// GET /namespaces/{namespace}/persistentvolumeclaims/{persistentvolumeclaim} or
 	// GET /namespaces/{namespace}/persistentvolumeclaims
 	if o.NamespaceName != "" {
-		if o.PersistentVolumeClaimName != "" {
-			pvcSelector = fmt.Sprintf(`namespace="%s", persistentvolumeclaim="%s"`, o.NamespaceName, o.PersistentVolumeClaimName)
+		if o.PVCFilter != "" {
+			pvcSelector = fmt.Sprintf(`namespace="%s", persistentvolumeclaim="%s"`, o.NamespaceName, o.PVCFilter)
 		} else {
 			pvcSelector = fmt.Sprintf(`namespace="%s", persistentvolumeclaim=~"%s"`, o.NamespaceName, o.ResourceFilter)
 		}

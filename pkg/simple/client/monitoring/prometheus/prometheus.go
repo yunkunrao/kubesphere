@@ -28,6 +28,8 @@ import (
 	"time"
 )
 
+const MeteringDefaultTimeout = 20 * time.Second
+
 // prometheus implements monitoring interface backed by Prometheus
 type prometheus struct {
 	client apiv1.API
@@ -141,6 +143,83 @@ func (p prometheus) GetNamedMetricsOverTime(metrics []string, start, end time.Ti
 	}
 
 	wg.Wait()
+
+	return res
+}
+
+func (p prometheus) GetNamedMeters(meters []string, ts time.Time, opts []monitoring.QueryOption) []monitoring.Metric {
+	var res []monitoring.Metric
+
+	queryOptions := monitoring.NewQueryOptions()
+
+	for _, opt := range opts {
+		opt.Apply(queryOptions)
+	}
+
+	prometheusCtx, cancel := context.WithTimeout(context.Background(), MeteringDefaultTimeout)
+	defer cancel()
+
+	for _, meter := range meters {
+		metric := meter
+
+		parsedResp := monitoring.Metric{MetricName: metric}
+
+		begin := time.Now()
+		value, err := p.client.Query(prometheusCtx, makeMeterExpr(metric, *queryOptions), ts)
+		end := time.Now()
+		timeElapsed := end.Unix() - begin.Unix()
+		if timeElapsed > int64(MeteringDefaultTimeout.Seconds())/2 {
+			klog.Warningf("long time query[cost %v seconds], expr: %v", timeElapsed, makeMeterExpr(metric, *queryOptions))
+		}
+
+		if err != nil {
+			parsedResp.Error = err.Error()
+		} else {
+			parsedResp.MetricData = parseQueryResp(value)
+		}
+
+		res = append(res, parsedResp)
+	}
+
+	return res
+}
+
+func (p prometheus) GetNamedMetersOverTime(metrics []string, start, end time.Time, step time.Duration, opts []monitoring.QueryOption) []monitoring.Metric {
+	var res []monitoring.Metric
+
+	queryOptions := monitoring.NewQueryOptions()
+
+	for _, opt := range opts {
+		opt.Apply(queryOptions)
+	}
+
+	timeRange := apiv1.Range{
+		Start: start,
+		End:   end,
+		Step:  step,
+	}
+
+	prometheusCtx, cancel := context.WithTimeout(context.Background(), MeteringDefaultTimeout)
+	defer cancel()
+
+	for _, metric := range metrics {
+		parsedResp := monitoring.Metric{MetricName: metric}
+		begin := time.Now()
+		value, err := p.client.QueryRange(prometheusCtx, makeMeterExpr(metric, *queryOptions), timeRange)
+		end := time.Now()
+		timeElapsed := end.Unix() - begin.Unix()
+		if timeElapsed > int64(MeteringDefaultTimeout.Seconds())/2 {
+			klog.Warningf("long time query[cost %v seconds], expr: %v", timeElapsed, makeMeterExpr(metric, *queryOptions))
+		}
+
+		if err != nil {
+			parsedResp.Error = err.Error()
+		} else {
+			parsedResp.MetricData = parseQueryRangeResp(value)
+		}
+
+		res = append(res, parsedResp)
+	}
 
 	return res
 }

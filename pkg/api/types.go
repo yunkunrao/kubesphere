@@ -72,7 +72,7 @@ const (
 	ClientKubeSphere  ClientType = "Kubesphere"
 	ClientIstio       ClientType = "Istio"
 	ClientS2i         ClientType = "S2i"
-	ClientApplication ClientType = "Application"
+	ClientApplication ClientType = "ApplicationName"
 
 	StatusOK = "ok"
 )

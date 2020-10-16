@@ -54,8 +54,13 @@ type MetricValue struct {
 	// The type of Point is a float64 array with fixed length of 2.
 	// So Point will always be initialized as [0, 0], rather than nil.
 	// To allow empty Sample, we should declare Sample to type *Point
-	Sample *Point  `json:"value,omitempty" description:"time series, values of vector type"`
-	Series []Point `json:"values,omitempty" description:"time series, values of matrix type"`
+	Sample   *Point  `json:"value,omitempty" description:"time series, values of vector type"`
+	Series   []Point `json:"values,omitempty" description:"time series, values of matrix type"`
+	MinValue float64 `json:"min_value" description:"minimum value from monitor points"`
+	MaxValue float64 `json:"max_value" description:"maximum value from monitor points"`
+	AvgValue float64 `json:"avg_value" description:"average value from monitor points"`
+	SumValue float64 `json:"sum_value" description:"sum value from monitor points"`
+	Fee      float64 `json:"fee" description:"resource fee"`
 }
 
 func (p Point) Timestamp() float64 {

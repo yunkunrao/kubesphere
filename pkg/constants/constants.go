@@ -86,6 +86,20 @@ const (
 	TerminalTag                = "Terminal"
 	EventsQueryTag             = "Events Query"
 	AuditingQueryTag           = "Auditing Query"
+
+	ClusterMetersTag   = "Cluster Meters"
+	NodeMetersTag      = "Node Meters"
+	WorkspaceMetersTag = "Workspace Meters"
+	NamespaceMetersTag = "Namespace Meters"
+	WorkloadMetersTag  = "Workload Meters"
+	PodMetersTag       = "Pod Meters"
+	ServiceMetricsTag  = "ServiceName Meters"
+
+	ApplicationReleaseName = "meta.helm.sh/release-name"
+	ApplicationReleaseNS   = "meta.helm.sh/release-namespace"
+
+	ApplicationName    = "app.kubernetes.io/name"
+	ApplicationVersion = "app.kubernetes.io/version"
 )
 
 var (

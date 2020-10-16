@@ -156,9 +156,9 @@ func TestMakeExpr(t *testing.T) {
 		{
 			name: "pvc_inodes_available",
 			opts: monitoring.QueryOptions{
-				Level:                     monitoring.LevelPVC,
-				NamespaceName:             "default",
-				PersistentVolumeClaimName: "db-123",
+				Level:         monitoring.LevelPVC,
+				NamespaceName: "default",
+				PVCFilter:     "db-123",
 			},
 		},
 		{

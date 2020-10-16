@@ -28,6 +28,7 @@ import (
 	"kubesphere.io/kubesphere/pkg/simple/client/monitoring"
 	"kubesphere.io/kubesphere/pkg/simple/client/openpitrix"
 	"regexp"
+	"strings"
 )
 
 type handler struct {
@@ -35,7 +36,7 @@ type handler struct {
 	mo model.MonitoringOperator
 }
 
-func newHandler(k kubernetes.Interface, m monitoring.Interface, f informers.InformerFactory, o openpitrix.Client) *handler {
+func NewHandler(k kubernetes.Interface, m monitoring.Interface, f informers.InformerFactory, o openpitrix.Client) *handler {
 	return &handler{k, model.NewMonitoringOperator(m, k, f, o)}
 }
 
@@ -186,6 +187,10 @@ func (h handler) handleNamedMetricsQuery(resp *restful.Response, q queryOptions)
 
 	var metrics []string
 	for _, metric := range q.namedMetrics {
+		if strings.HasPrefix(metric, model.MetricMeterPrefix) {
+			// skip meter metric
+			continue
+		}
 		ok, _ := regexp.MatchString(q.metricFilter, metric)
 		if ok {
 			metrics = append(metrics, metric)

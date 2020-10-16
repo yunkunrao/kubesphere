@@ -17,6 +17,11 @@ limitations under the License.
 package monitoring
 
 import (
+	"fmt"
+	"math"
+	"strings"
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
@@ -26,10 +31,12 @@ import (
 	"kubesphere.io/kubesphere/pkg/informers"
 	"kubesphere.io/kubesphere/pkg/models/monitoring/expressions"
 	"kubesphere.io/kubesphere/pkg/models/openpitrix"
+	"kubesphere.io/kubesphere/pkg/server/errors"
 	"kubesphere.io/kubesphere/pkg/server/params"
 	"kubesphere.io/kubesphere/pkg/simple/client/monitoring"
 	opclient "kubesphere.io/kubesphere/pkg/simple/client/openpitrix"
-	"time"
+	"sigs.k8s.io/application/pkg/apis/app/v1beta1"
+	applicationinformers "sigs.k8s.io/application/pkg/client/informers/externalversions"
 )
 
 type MonitoringOperator interface {
@@ -43,12 +50,19 @@ type MonitoringOperator interface {
 	// TODO: refactor
 	GetKubeSphereStats() Metrics
 	GetWorkspaceStats(workspace string) Metrics
+
+	// meter
+	GetNamedMetersOverTime(metrics []string, start, end time.Time, step time.Duration, opt monitoring.QueryOption) (Metrics, error)
+	GetNamedMeters(metrics []string, time time.Time, opt monitoring.QueryOption) (Metrics, error)
+	GetAppComponentsMap(ns string, apps []string) map[string][]string
+	GetSerivePodsMap(ns string, services []string) map[string][]string
 }
 
 type monitoringOperator struct {
 	c   monitoring.Interface
 	k8s kubernetes.Interface
 	ks  ksinformers.SharedInformerFactory
+	app applicationinformers.SharedInformerFactory
 	op  openpitrix.Interface
 }
 
@@ -57,6 +71,7 @@ func NewMonitoringOperator(client monitoring.Interface, k8s kubernetes.Interface
 		c:   client,
 		k8s: k8s,
 		ks:  factory.KubeSphereSharedInformerFactory(),
+		app: factory.ApplicationSharedInformerFactory(),
 		op:  openpitrix.NewOpenpitrixOperator(factory.KubernetesSharedInformerFactory(), opClient),
 	}
 }
@@ -301,4 +316,201 @@ func (mo monitoringOperator) GetWorkspaceStats(workspace string) Metrics {
 	}
 
 	return res
+}
+
+/*
+	meter related methods
+*/
+
+func (mo monitoringOperator) getNamedMetersWithHourInterval(meters []string, t time.Time, opt monitoring.QueryOption) Metrics {
+
+	var opts []monitoring.QueryOption
+
+	opts = append(opts, opt)
+	opts = append(opts, monitoring.MeterOption{
+		Step: 1 * time.Hour,
+	})
+
+	ress := mo.c.GetNamedMeters(meters, t, opts)
+
+	return Metrics{Results: ress}
+}
+
+func (mo monitoringOperator) GetNamedMetersOverTime(meters []string, start, end time.Time, step time.Duration, opt monitoring.QueryOption) (metrics Metrics, err error) {
+
+	if step.Hours() < 1 {
+		klog.Warning("step should be longer than one hour")
+		step = 1 * time.Hour
+	}
+	if end.Sub(start).Hours() > 30*24 {
+		if step.Hours() < 24 {
+			err = errors.New("step should be larger than 24 hours")
+			return
+		}
+	}
+	if math.Mod(step.Hours(), 1.0) > 0 {
+		err = errors.New("step should be integer hours")
+		return
+	}
+
+	scalingFactor := step.Hours()
+
+	var opts []monitoring.QueryOption
+
+	opts = append(opts, opt)
+	opts = append(opts, monitoring.MeterOption{
+		Start: start,
+		End:   end,
+		Step:  step,
+	})
+
+	ress := mo.c.GetNamedMetersOverTime(meters, start, end, step, opts)
+
+	for i, _ := range ress {
+		ress[i].MetricData = updateMetricStatData(ress[i], scalingFactor)
+	}
+
+	return Metrics{Results: ress}, nil
+}
+
+func (mo monitoringOperator) GetNamedMeters(meters []string, time time.Time, opt monitoring.QueryOption) (Metrics, error) {
+
+	metersPerHour := mo.getNamedMetersWithHourInterval(meters, time, opt)
+
+	for metricIndex, _ := range metersPerHour.Results {
+
+		res := metersPerHour.Results[metricIndex]
+
+		metersPerHour.Results[metricIndex].MetricData = updateMetricStatData(res, 1)
+	}
+
+	return metersPerHour, nil
+}
+
+func (mo monitoringOperator) GetAppComponentsMap(ns string, apps []string) map[string][]string {
+
+	componentsMap := make(map[string][]string)
+
+	appObjs, err := mo.app.App().V1beta1().Applications().Lister().Applications(ns).List(labels.Everything())
+	if err != nil {
+		klog.Error(err.Error())
+		return componentsMap
+	}
+
+	getAppFullName := func(appObject *v1beta1.Application) (name string) {
+		name = appObject.Labels[constants.ApplicationName]
+		if appObject.Labels[constants.ApplicationVersion] != "" {
+			name += fmt.Sprintf(":%v", appObject.Labels[constants.ApplicationVersion])
+		}
+		return
+	}
+
+	appFilter := func(appObject *v1beta1.Application) bool {
+
+		for _, app := range apps {
+			var applicationName, applicationVersion string
+			tmp := strings.Split(app, ":")
+
+			if len(tmp) >= 1 {
+				applicationName = tmp[0]
+			}
+			if len(tmp) == 2 {
+				applicationVersion = tmp[1]
+			}
+
+			if applicationName != "" && appObject.Labels[constants.ApplicationName] != applicationName {
+				return false
+			}
+			if applicationVersion != "" && appObject.Labels[constants.ApplicationVersion] != applicationVersion {
+				return false
+			}
+			return true
+		}
+
+		return true
+	}
+
+	for _, appObj := range appObjs {
+		if appFilter(appObj) {
+			for _, com := range appObj.Status.ComponentList.Objects {
+				kind := strings.Title(com.Kind)
+				name := com.Name
+				componentsMap[getAppFullName((appObj))] = append(componentsMap[getAppFullName(appObj)], kind+":"+name)
+			}
+		}
+	}
+
+	return componentsMap
+}
+
+func (mo monitoringOperator) getApplicationPVCs(appObject *v1beta1.Application) []string {
+
+	var pvcList []string
+
+	ns := appObject.Namespace
+	for _, com := range appObject.Status.ComponentList.Objects {
+
+		switch strings.Title(com.Kind) {
+		case "Deployment":
+			deployObj, err := mo.k8s.AppsV1().Deployments(ns).Get(com.Name, metav1.GetOptions{})
+			if err != nil {
+				klog.Error(err.Error())
+				return nil
+			}
+
+			for _, vol := range deployObj.Spec.Template.Spec.Volumes {
+				pvcList = append(pvcList, vol.PersistentVolumeClaim.ClaimName)
+			}
+		case "Statefulset":
+			stsObj, err := mo.k8s.AppsV1().StatefulSets(ns).Get(com.Name, metav1.GetOptions{})
+			if err != nil {
+				klog.Error(err.Error())
+				return nil
+			}
+			for _, vol := range stsObj.Spec.Template.Spec.Volumes {
+				pvcList = append(pvcList, vol.PersistentVolumeClaim.ClaimName)
+			}
+		}
+
+	}
+
+	return pvcList
+
+}
+
+func (mo monitoringOperator) GetSerivePodsMap(ns string, services []string) map[string][]string {
+	var svcPodsMap = make(map[string][]string)
+
+	for _, svc := range services {
+		svcObj, err := mo.k8s.CoreV1().Services(ns).Get(svc, metav1.GetOptions{})
+		if err != nil {
+			klog.Error(err.Error())
+			return svcPodsMap
+		}
+
+		svcSelector := svcObj.Spec.Selector
+		if len(svcSelector) == 0 {
+			return svcPodsMap
+		}
+
+		svcLabels := labels.Set{}
+		for key, value := range svcSelector {
+			svcLabels[key] = value
+		}
+
+		selector := labels.SelectorFromSet(svcLabels)
+		opt := metav1.ListOptions{LabelSelector: selector.String()}
+
+		podList, err := mo.k8s.CoreV1().Pods(ns).List(opt)
+		if err != nil {
+			klog.Error(err.Error())
+			return svcPodsMap
+		}
+
+		for _, pod := range podList.Items {
+			svcPodsMap[svc] = append(svcPodsMap[svc], pod.Name)
+		}
+
+	}
+	return svcPodsMap
 }
