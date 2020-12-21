@@ -112,7 +112,7 @@ round(
 
 	"meter_cluster_pvc_bytes_total": `
 sum(
-	topk(1, sum_over_time(avg_over_time(namespace:pvc_bytes_pod:sum{}[1h])[$step:1h])) by (persistentvolumeclaim)
+	topk(1, sum_over_time(avg_over_time(namespace:pvc_bytes_total:sum{}[1h])[$step:1h])) by (persistentvolumeclaim)
 )`,
 
 	// node
@@ -232,7 +232,7 @@ sum(
 		1,
 		sum_over_time(
 			avg_over_time(
-				namespace:pvc_bytes_pod:sum{$nodeSelector}[1h]
+				namespace:pvc_bytes_total:sum{$nodeSelector}[1h]
 			)[$step:1h]
 		)
 	) by (persistentvolumeclaim, node)
@@ -375,7 +375,7 @@ sum (
 	topk(
 		1,
 		sum_over_time(
-			avg_over_time(namespace:pvc_bytes_pod:sum{$1}[1h])[$step:1h]
+			avg_over_time(namespace:pvc_bytes_total:sum{$1}[1h])[$step:1h]
 		)
 	) by (persistentvolumeclaim, workspace)
 ) by (workspace)`,
@@ -516,7 +516,7 @@ sum (
 	topk(
 		1,
 		sum_over_time(
-			avg_over_time(namespace:pvc_bytes_pod:sum{$1}[1h])[$step:1h]
+			avg_over_time(namespace:pvc_bytes_total:sum{$1}[1h])[$step:1h]
 		)
 	) by (persistentvolumeclaim, namespace)
 ) by (namespace)`,
@@ -690,7 +690,7 @@ sum by (namespace, application) (
 	"meter_application_pvc_bytes_total": `
 sum by (namespace, application) (
 	label_replace(
-		topk(1, sum_over_time(avg_over_time(namespace:pvc_bytes_pod:sum{$1}[1h])[$step:1h])) by (persistentvolumeclaim),
+		topk(1, sum_over_time(avg_over_time(namespace:pvc_bytes_total:sum{$1}[1h])[$step:1h])) by (persistentvolumeclaim),
 		"application",
 		"$app",
 		"",
@@ -803,7 +803,7 @@ round(
 sum by (namespace, workload) (
 	topk(
 		1,
-		sum_over_time(avg_over_time(namespace:pvc_bytes_pod:sum{$1}[1h])[$step:1h])
+		sum_over_time(avg_over_time(namespace:pvc_bytes_total:sum{$1}[1h])[$step:1h])
 	) by (persistentvolumeclaim, namespace, workload)
 )`,
 
@@ -1180,7 +1180,7 @@ sum by (namespace, pod) (
 
 	"meter_pod_pvc_bytes_total": `
 sum by (namespace, pod) (
-	sum_over_time(avg_over_time(namespace:pvc_bytes_pod:sum{}[1h])[$step:1h])
+	sum_over_time(avg_over_time(namespace:pvc_bytes_total:sum{}[1h])[$step:1h])
 )
 * on (namespace, pod) group_left(owner_kind, owner_name) kube_pod_owner{$1}
 * on (namespace, pod) group_left(node) kube_pod_info{$2}`,

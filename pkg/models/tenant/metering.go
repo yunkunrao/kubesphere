@@ -471,7 +471,6 @@ func (t *tenantOperator) makeQueryOptions(user user.Info, q meteringv1alpha1.Que
 		return qo, errors.Errorf(meteringv1alpha1.ErrParamConflict)
 	}
 
-	// Ensure query start time to be after the namespace creation time
 	if q.NamespaceName != "" {
 
 		queryParameter := query.New()
