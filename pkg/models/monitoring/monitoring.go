@@ -353,8 +353,6 @@ func (mo monitoringOperator) GetNamedMetersOverTime(meters []string, start, end 
 		return
 	}
 
-	scalingFactor := step.Hours()
-
 	var opts []monitoring.QueryOption
 
 	opts = append(opts, opt)
@@ -367,7 +365,7 @@ func (mo monitoringOperator) GetNamedMetersOverTime(meters []string, start, end 
 	ress := mo.c.GetNamedMetersOverTime(meters, start, end, step, opts)
 
 	for i, _ := range ress {
-		ress[i].MetricData = updateMetricStatData(ress[i], scalingFactor)
+		ress[i].MetricData = updateMetricStatData(ress[i], 1)
 	}
 
 	return Metrics{Results: ress}, nil

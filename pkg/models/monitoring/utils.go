@@ -162,20 +162,20 @@ func getFeeWithMeterName(meterName string, sum float64) float64 {
 			sum = math.Round(sum*1000) / 1000
 			return priceInfo.CpuPerCorePerHour * sum
 		case METER_RESOURCE_TYPE_MEM:
-			// unit: Gigabyte, precision: 0.1
-			sum = math.Round(sum/1073741824*10) / 10
+			// unit: Gigabyte, precision: 0.001
+			sum = math.Round(sum/1073741824*1000) / 1000
 			return priceInfo.MemPerGigabytesPerHour * sum
 		case METER_RESOURCE_TYPE_NET_INGRESS:
-			// unit: Megabyte, precision: 1
-			sum = math.Round(sum / 1048576)
+			// unit: Gigabyte, precision: 0.001
+			sum = math.Round(sum/1073741824*1000) / 1000
 			return priceInfo.IngressNetworkTrafficPerGiagabytesPerHour * sum
 		case METER_RESOURCE_TYPE_NET_EGRESS:
-			// unit: Megabyte, precision:
-			sum = math.Round(sum / 1048576)
+			// unit: Gigabyte, precision: 0.001
+			sum = math.Round(sum/1073741824*1000) / 1000
 			return priceInfo.EgressNetworkTrafficPerGigabytesPerHour * sum
 		case METER_RESOURCE_TYPE_PVC:
-			// unit: Gigabyte, precision: 0.1
-			sum = math.Round(sum/1073741824*10) / 10
+			// unit: Gigabyte, precision: 0.001
+			sum = math.Round(sum/1073741824*1000) / 1000
 			return priceInfo.PvcPerGigabytesPerHour * sum
 		}
 
