@@ -380,6 +380,13 @@ func ExportMetrics(resp *restful.Response, metrics model.Metrics) {
 	resp.Header().Set(restful.HEADER_ContentType, "text/plain")
 	resp.Header().Set("Content-Disposition", "attachment")
 
+	for i, _ := range metrics.Results {
+		ret := metrics.Results[i]
+		for j, _ := range ret.MetricValues {
+			ret.MetricValues[j].TransferToExportedMetricValue()
+		}
+	}
+
 	resBytes, err := json.MarshalIndent(metrics, "", " ")
 	if err != nil {
 		api.HandleBadRequest(resp, nil, err)
