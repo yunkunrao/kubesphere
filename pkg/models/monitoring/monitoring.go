@@ -353,6 +353,13 @@ func (mo monitoringOperator) GetNamedMetersOverTime(meters []string, start, end 
 		return
 	}
 
+	// query time range: (start, end], so here we need to exclude start itself.
+	if start.Add(step).After(end) {
+		start = end
+	} else {
+		start = start.Add(step)
+	}
+
 	var opts []monitoring.QueryOption
 
 	opts = append(opts, opt)
