@@ -336,6 +336,21 @@ func (mo monitoringOperator) getNamedMetersWithHourInterval(meters []string, t t
 	return Metrics{Results: ress}
 }
 
+func generateScalingFactorMap(step time.Duration) map[string]float64 {
+	scalingMap := make(map[string]float64)
+
+	for k := range MeterResourceMap {
+		if strings.Contains(k, "_cpu_usage") ||
+			strings.Contains(k, "_memory_usage") ||
+			strings.Contains(k, "_pvc_bytes_total") {
+			scalingMap[k] = step.Hours()
+		} else {
+			scalingMap[k] = 1
+		}
+	}
+	return scalingMap
+}
+
 func (mo monitoringOperator) GetNamedMetersOverTime(meters []string, start, end time.Time, step time.Duration, opt monitoring.QueryOption) (metrics Metrics, err error) {
 
 	if step.Hours() < 1 {
@@ -370,9 +385,10 @@ func (mo monitoringOperator) GetNamedMetersOverTime(meters []string, start, end 
 	})
 
 	ress := mo.c.GetNamedMetersOverTime(meters, start, end, step, opts)
+	sMap := generateScalingFactorMap(step)
 
 	for i, _ := range ress {
-		ress[i].MetricData = updateMetricStatData(ress[i], 1)
+		ress[i].MetricData = updateMetricStatData(ress[i], sMap)
 	}
 
 	return Metrics{Results: ress}, nil
@@ -386,7 +402,7 @@ func (mo monitoringOperator) GetNamedMeters(meters []string, time time.Time, opt
 
 		res := metersPerHour.Results[metricIndex]
 
-		metersPerHour.Results[metricIndex].MetricData = updateMetricStatData(res, 1)
+		metersPerHour.Results[metricIndex].MetricData = updateMetricStatData(res, nil)
 	}
 
 	return metersPerHour, nil

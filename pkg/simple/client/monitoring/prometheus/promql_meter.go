@@ -28,25 +28,25 @@ var promQLMeterTemplates = map[string]string{
 round(
 	(
 		sum(
-			sum_over_time(avg_over_time(kube_pod_container_resource_requests{resource="cpu",unit="core"}[1h])[$step:1h])
+			avg_over_time(kube_pod_container_resource_requests{resource="cpu",unit="core"}[$step])
 		) >=
 		(
-			sum_over_time(avg_over_time(:node_cpu_utilisation:avg1m[1h])[$step:1h]) * 
+			avg_over_time(:node_cpu_utilisation:avg1m[$step]) * 
 			sum(
-				sum_over_time(avg_over_time(node:node_num_cpu:sum[1h])[$step:1h])
+				avg_over_time(node:node_num_cpu:sum[$step])
 			)
 		)
 	)
 	or
 	(
 		(
-			sum_over_time(avg_over_time(:node_cpu_utilisation:avg1m[1h])[$step:1h]) * 
+			avg_over_time(:node_cpu_utilisation:avg1m[$step]) * 
 			sum(
-				sum_over_time(avg_over_time(node:node_num_cpu:sum[1h])[$step:1h])
+				avg_over_time(node:node_num_cpu:sum[$step])
 			)
 		) >
 		sum(
-			sum_over_time(avg_over_time(kube_pod_container_resource_requests{resource="cpu",unit="core"}[1h])[$step:1h])
+			avg_over_time(kube_pod_container_resource_requests{resource="cpu",unit="core"}[$step])
 		)
 	),
 	0.001
@@ -56,25 +56,25 @@ round(
 round(
 	(
 		sum(
-			sum_over_time(avg_over_time(kube_pod_container_resource_requests{resource="memory",unit="byte"}[1h])[$step:1h])
+			avg_over_time(kube_pod_container_resource_requests{resource="memory",unit="byte"}[$step])
 		) >=
 		(
-			sum_over_time(avg_over_time(:node_memory_utilisation:[1h])[$step:1h]) * 
+			avg_over_time(:node_memory_utilisation:[$step]) * 
 			sum(
-				sum_over_time(avg_over_time(node:node_memory_bytes_total:sum[1h])[$step:1h])
+				avg_over_time(node:node_memory_bytes_total:sum[$step])
 			)
 		)
 	)
 	or
 	(
 		(
-			sum_over_time(avg_over_time(:node_memory_utilisation:[1h])[$step:1h]) * 
+			avg_over_time(:node_memory_utilisation:[$step]) * 
 			sum(
-				sum_over_time(avg_over_time(node:node_memory_bytes_total:sum[1h])[$step:1h])
+				avg_over_time(node:node_memory_bytes_total:sum[$step])
 			)
 		) >
 		sum(
-			sum_over_time(avg_over_time(kube_pod_container_resource_requests{resource="memory",unit="byte"}[1h])[$step:1h])
+			avg_over_time(kube_pod_container_resource_requests{resource="memory",unit="byte"}[$step])
 		)
 	),
 	1
@@ -83,13 +83,11 @@ round(
 	"meter_cluster_net_bytes_transmitted": `
 round(
 	sum(
-		sum_over_time(
-			increase(
-				node_network_transmit_bytes_total{
-					job="node-exporter",
-					device!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)"
-				}[1h]
-			)[$step:1h]
+		increase(
+			node_network_transmit_bytes_total{
+				job="node-exporter",
+				device!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)"
+			}[$step]
 		)
 	),
 	1
@@ -98,13 +96,11 @@ round(
 	"meter_cluster_net_bytes_received": `
 round(
 	sum(
-		sum_over_time(
-			increase(
-				node_network_receive_bytes_total{
-					job="node-exporter",
-					device!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)"
-				}[1h]
-			)[$step:1h]
+		increase(
+			node_network_receive_bytes_total{
+				job="node-exporter",
+				device!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)"
+			}[$step]
 		)
 	),
 	1
@@ -112,7 +108,7 @@ round(
 
 	"meter_cluster_pvc_bytes_total": `
 sum(
-	topk(1, sum_over_time(avg_over_time(namespace:pvc_bytes_total:sum{}[1h])[$step:1h])) by (persistentvolumeclaim)
+	topk(1, avg_over_time(namespace:pvc_bytes_total:sum{}[$step])) by (persistentvolumeclaim)
 )`,
 
 	// node
@@ -120,28 +116,28 @@ sum(
 round(
 	(
 		sum(
-			sum_over_time(avg_over_time(kube_pod_container_resource_requests{$nodeSelector, resource="cpu",unit="core"}[1h])[$step:1h])
+			avg_over_time(kube_pod_container_resource_requests{$nodeSelector, resource="cpu",unit="core"}[$step])
 		) by (node) >=
 		sum(
-			sum_over_time(avg_over_time(node:node_cpu_utilisation:avg1m{$nodeSelector}[1h])[$step:1h]) * 
-			sum_over_time(avg_over_time(node:node_num_cpu:sum{$nodeSelector}[1h])[$step:1h])
+			avg_over_time(node:node_cpu_utilisation:avg1m{$nodeSelector}[$step]) * 
+			avg_over_time(node:node_num_cpu:sum{$nodeSelector}[$step])
 		) by (node)
 	)
 	or
 	(
 		sum(
-			sum_over_time(avg_over_time(node:node_cpu_utilisation:avg1m{$nodeSelector}[1h])[$step:1h]) * 
-			sum_over_time(avg_over_time(node:node_num_cpu:sum{$nodeSelector}[1h])[$step:1h])
+			avg_over_time(node:node_cpu_utilisation:avg1m{$nodeSelector}[$step]) * 
+			avg_over_time(node:node_num_cpu:sum{$nodeSelector}[$step])
 		) by (node) >
 		sum(
-			sum_over_time(avg_over_time(kube_pod_container_resource_requests{$nodeSelector, resource="cpu",unit="core"}[1h])[$step:1h])
+			avg_over_time(kube_pod_container_resource_requests{$nodeSelector, resource="cpu",unit="core"}[$step])
 		) by (node)
 	)
 	or
 	(
 		sum(
-			sum_over_time(avg_over_time(node:node_cpu_utilisation:avg1m{$nodeSelector}[1h])[$step:1h]) * 
-			sum_over_time(avg_over_time(node:node_num_cpu:sum{$nodeSelector}[1h])[$step:1h])
+			avg_over_time(node:node_cpu_utilisation:avg1m{$nodeSelector}[$step]) * 
+			avg_over_time(node:node_num_cpu:sum{$nodeSelector}[$step])
 		) by (node)
 	),
 	0.001
@@ -151,28 +147,28 @@ round(
 round(
 	(
 		sum(
-			sum_over_time(avg_over_time(kube_pod_container_resource_requests{$nodeSelector, resource="memory",unit="byte"}[1h])[$step:1h])
+			avg_over_time(kube_pod_container_resource_requests{$nodeSelector, resource="memory",unit="byte"}[$step])
 		) by (node) >=
 		sum(
-			sum_over_time(avg_over_time(node:node_memory_bytes_total:sum{$nodeSelector}[1h])[$step:1h]) -
-			sum_over_time(avg_over_time(node:node_memory_bytes_available:sum{$nodeSelector}[1h])[$step:1h])
+			avg_over_time(node:node_memory_bytes_total:sum{$nodeSelector}[$step]) -
+			avg_over_time(node:node_memory_bytes_available:sum{$nodeSelector}[$step])
 		) by (node)
 	)
 	or
 	(
 		sum(
-			sum_over_time(avg_over_time(node:node_memory_bytes_total:sum{$nodeSelector}[1h])[$step:1h]) -
-			sum_over_time(avg_over_time(node:node_memory_bytes_available:sum{$nodeSelector}[1h])[$step:1h])
+			avg_over_time(node:node_memory_bytes_total:sum{$nodeSelector}[$step]) -
+			avg_over_time(node:node_memory_bytes_available:sum{$nodeSelector}[$step])
 		) by (node) >
 		sum(
-			sum_over_time(avg_over_time(kube_pod_container_resource_requests{$nodeSelector, resource="memory",unit="byte"}[1h])[$step:1h])
+			avg_over_time(kube_pod_container_resource_requests{$nodeSelector, resource="memory",unit="byte"}[$step])
 		) by (node)
 	)
 	or
 	(
 		sum(
-			sum_over_time(avg_over_time(node:node_memory_bytes_total:sum{$nodeSelector}[1h])[$step:1h]) -
-			sum_over_time(avg_over_time(node:node_memory_bytes_available:sum{$nodeSelector}[1h])[$step:1h])
+			avg_over_time(node:node_memory_bytes_total:sum{$nodeSelector}[$step]) -
+			avg_over_time(node:node_memory_bytes_available:sum{$nodeSelector}[$step])
 		) by (node)
 	),
 	0.001
@@ -183,14 +179,12 @@ round(
 	sum by (node) (
 		sum without (instance) (
 			label_replace(
-				sum_over_time(
-					increase(
-						node_network_transmit_bytes_total{
-							job="node-exporter",
-							device!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
-							$instanceSelector
-						}[1h]
-					)[$step:1h]
+				increase(
+					node_network_transmit_bytes_total{
+						job="node-exporter",
+						device!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
+						$instanceSelector
+					}[$step]
 				),
 				"node",
 				"$1",
@@ -207,14 +201,12 @@ round(
 	sum by (node) (
 		sum without (instance) (
 			label_replace(
-				sum_over_time(
-					increase(
-						node_network_receive_bytes_total{
-							job="node-exporter",
-							device!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
-							$instanceSelector
-						}[1h]
-					)[$step:1h]
+				increase(
+					node_network_receive_bytes_total{
+						job="node-exporter",
+						device!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
+						$instanceSelector
+					}[$step]
 				),
 				"node", "
 				$1",
@@ -230,10 +222,8 @@ round(
 sum(
 	topk(
 		1,
-		sum_over_time(
-			avg_over_time(
-				namespace:pvc_bytes_total:sum{$nodeSelector}[1h]
-			)[$step:1h]
+		avg_over_time(
+			namespace:pvc_bytes_total:sum{$nodeSelector}[$step]
 		)
 	) by (persistentvolumeclaim, node)
 ) by (node)`,
@@ -243,49 +233,39 @@ sum(
 round(
 	(
 		sum by (workspace) (
-			sum_over_time(
-				avg_over_time(
-					namespace:kube_pod_resource_request:sum{
-						owner_kind!="Job",
-						namespace!="",
-						resource="cpu",
-						$1
-					}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:kube_pod_resource_request:sum{
+					owner_kind!="Job",
+					namespace!="",
+					resource="cpu",
+					$1
+				}[$step]
 			)
 		) >=
 		sum by (workspace) (
-			sum_over_time(
-				avg_over_time(namespace:container_cpu_usage_seconds_total:sum_rate{namespace!="", $1}[1h])[$step:1h]
-			)
+			avg_over_time(namespace:container_cpu_usage_seconds_total:sum_rate{namespace!="", $1}[$step])
 		)
 	)
 	or
 	(
 		sum by (workspace) (
-			sum_over_time(
-				avg_over_time(namespace:container_cpu_usage_seconds_total:sum_rate{namespace!="", $1}[1h])[$step:1h]
-			)
+			avg_over_time(namespace:container_cpu_usage_seconds_total:sum_rate{namespace!="", $1}[$step])
 		) >
 		sum by (workspace) (
-			sum_over_time(
-				avg_over_time(
-					namespace:kube_pod_resource_request:sum{
-						owner_kind!="Job",
-						namespace!="",
-						resource="cpu",
-						$1
-					}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:kube_pod_resource_request:sum{
+					owner_kind!="Job",
+					namespace!="",
+					resource="cpu",
+					$1
+				}[$step]
 			)
 		)
 	)
 	or
 	(
 		sum by (workspace) (
-			sum_over_time(
-				avg_over_time(namespace:container_cpu_usage_seconds_total:sum_rate{namespace!="", $1}[1h])[$step:1h]
-			)
+			avg_over_time(namespace:container_cpu_usage_seconds_total:sum_rate{namespace!="", $1}[$step])
 		)
 	),
 	0.001
@@ -295,40 +275,36 @@ round(
 round(
 	(
 		sum by (workspace) (
-			sum_over_time(
-				avg_over_time(
-					namespace:kube_pod_resource_request:sum{
-						owner_kind!="Job",
-						namespace!="",
-						resource="memory",
-						$1
-					}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:kube_pod_resource_request:sum{
+					owner_kind!="Job",
+					namespace!="",
+					resource="memory",
+					$1
+				}[$step]
 			)
 		) >=
 		sum by (workspace) (
-			sum_over_time(avg_over_time(namespace:container_memory_usage_bytes:sum{namespace!="", $1}[1h])[$step:1h])
+			avg_over_time(namespace:container_memory_usage_bytes:sum{namespace!="", $1}[$step])
 		)
 	)
 	or
 	(
 		sum by (workspace) (
-			sum_over_time(avg_over_time(namespace:container_memory_usage_bytes:sum{namespace!="", $1}[1h])[$step:1h])
+			avg_over_time(namespace:container_memory_usage_bytes:sum{namespace!="", $1}[$step])
 		) >
 		sum by (workspace) (
-			sum_over_time(
-				avg_over_time(
-					namespace:kube_pod_resource_request:sum{
+			avg_over_time(
+				namespace:kube_pod_resource_request:sum{
 					owner_kind!="Job", namespace!="", resource="memory", $1
-					}[1h]
-				)[$step:1h]
+				}[$step]
 			)
 		)
 	)
 	or
 	(
 		sum by (workspace) (
-			sum_over_time(avg_over_time(namespace:container_memory_usage_bytes:sum{namespace!="", $1}[1h])[$step:1h])
+			avg_over_time(namespace:container_memory_usage_bytes:sum{namespace!="", $1}[$step])
 		)
 	),
 	1
@@ -338,15 +314,13 @@ round(
 round(
 	sum by (workspace) (
 		sum by (namespace) (
-			sum_over_time(
-				increase(
-					container_network_transmit_bytes_total{
-						namespace!="",
-						pod!="",
-						interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
-						job="kubelet"
-					}[1h]
-				)[$step:1h]
+			increase(
+				container_network_transmit_bytes_total{
+					namespace!="",
+					pod!="",
+					interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
+					job="kubelet"
+				}[$step]
 			)
 		) * on (namespace) group_left(workspace)
 		kube_namespace_labels{$1}
@@ -356,15 +330,13 @@ round(
 round(
 	sum by (workspace) (
 		sum by (namespace) (
-			sum_over_time(
-				increase(
-					container_network_receive_bytes_total{
-						namespace!="",
-						pod!="",
-						interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
-						job="kubelet"
-					}[1h]
-				)[$step:1h]
+			increase(
+				container_network_receive_bytes_total{
+					namespace!="",
+					pod!="",
+					interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
+					job="kubelet"
+				}[$step]
 			)
 		) * on (namespace) group_left(workspace)
 		kube_namespace_labels{$1}
@@ -374,9 +346,7 @@ round(
 sum (
 	topk(
 		1,
-		sum_over_time(
-			avg_over_time(namespace:pvc_bytes_total:sum{$1}[1h])[$step:1h]
-		)
+		avg_over_time(namespace:pvc_bytes_total:sum{$1}[$step])
 	) by (persistentvolumeclaim, workspace)
 ) by (workspace)`,
 
@@ -385,43 +355,35 @@ sum (
 round(
 	(
 		sum by (namespace) (
-			sum_over_time(
-				avg_over_time(
-					namespace:kube_pod_resource_request:sum{
-						owner_kind!="Job",
-						namespace!="",
-						resource="cpu",
-						$1
-					}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:kube_pod_resource_request:sum{
+					owner_kind!="Job",
+					namespace!="",
+					resource="cpu",
+					$1
+				}[$step]
 			)
 		) >=
 		sum by (namespace) (
-			sum_over_time(
-				avg_over_time(namespace:container_cpu_usage_seconds_total:sum_rate{namespace!="", $1}[1h])[$step:1h]
-			)
+			avg_over_time(namespace:container_cpu_usage_seconds_total:sum_rate{namespace!="", $1}[$step])
 		)
 	)
 	or
 	(
 		sum by (namespace) (
-			sum_over_time(avg_over_time(namespace:container_cpu_usage_seconds_total:sum_rate{namespace!="", $1}[1h])[$step:1h])
+			avg_over_time(namespace:container_cpu_usage_seconds_total:sum_rate{namespace!="", $1}[$step])
 		) >
 		sum by (namespace) (
-			sum_over_time(
-				avg_over_time(
-					namespace:kube_pod_resource_request:sum{owner_kind!="Job", namespace!="", resource="cpu", $1}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:kube_pod_resource_request:sum{owner_kind!="Job", namespace!="", resource="cpu", $1}[$step]
 			)
 		)
 	)
 	or
 	(
 		sum by (namespace) (
-			sum_over_time(
-				avg_over_time(
-					namespace:container_cpu_usage_seconds_total:sum_rate{namespace!="", $1}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:container_cpu_usage_seconds_total:sum_rate{namespace!="", $1}[$step]
 			)
 		)
 	),
@@ -432,43 +394,37 @@ round(
 round(
 	(
 		sum by (namespace) (
-			sum_over_time(
-				avg_over_time(
-					namespace:kube_pod_resource_request:sum{
-						owner_kind!="Job",
-						namespace!="",
-						resource="memory",
-						$1
-					}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:kube_pod_resource_request:sum{
+					owner_kind!="Job",
+					namespace!="",
+					resource="memory",
+					$1
+				}[$step]
 			)
 		) >=
 		sum by (namespace) (
-			sum_over_time(avg_over_time(namespace:container_memory_usage_bytes_wo_cache:sum{namespace!="", $1}[1h])[$step:1h])
+			avg_over_time(namespace:container_memory_usage_bytes_wo_cache:sum{namespace!="", $1}[$step])
 		)
 	)
 	or
 	(
 		sum by (namespace) (
-			sum_over_time(avg_over_time(namespace:container_memory_usage_bytes_wo_cache:sum{namespace!="", $1}[1h])[$step:1h])
+			avg_over_time(namespace:container_memory_usage_bytes_wo_cache:sum{namespace!="", $1}[$step])
 		) >
 		sum by (namespace) (
-			sum_over_time(
-				avg_over_time(
-					namespace:kube_pod_resource_request:sum{
-						owner_kind!="Job", namespace!="", resource="memory", $1
-					}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:kube_pod_resource_request:sum{
+					owner_kind!="Job", namespace!="", resource="memory", $1
+				}[$step]
 			)
 		)
 	)
 	or
 	(
 		sum by (namespace) (
-			sum_over_time(
-				avg_over_time(
-					namespace:container_memory_usage_bytes_wo_cache:sum{namespace!="", $1}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:container_memory_usage_bytes_wo_cache:sum{namespace!="", $1}[$step]
 			)
 		)
 	),
@@ -478,15 +434,13 @@ round(
 	"meter_namespace_net_bytes_transmitted": `
 round(
 	sum by (namespace) (
-		sum_over_time(
-			increase(
-				container_network_transmit_bytes_total{
-					namespace!="",
-					pod!="",
-					interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
-					job="kubelet"
-				}[1h]
-			)[$step:1h]
+		increase(
+			container_network_transmit_bytes_total{
+				namespace!="",
+				pod!="",
+				interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
+				job="kubelet"
+			}[$step]
 		)
 		* on (namespace) group_left(workspace)
 		kube_namespace_labels{$1}
@@ -496,15 +450,13 @@ round(
 	"meter_namespace_net_bytes_received": `
 round(
 	sum by (namespace) (
-		sum_over_time(
-			increase(
-				container_network_receive_bytes_total{
-					namespace!="",
-					pod!="",
-					interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
-					job="kubelet"
-				}[1h]
-			)[$step:1h]
+		increase(
+			container_network_receive_bytes_total{
+				namespace!="",
+				pod!="",
+				interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
+				job="kubelet"
+			}[$step]
 		)
 		* on (namespace) group_left(workspace)
 		kube_namespace_labels{$1}
@@ -515,9 +467,7 @@ round(
 sum (
 	topk(
 		1,
-		sum_over_time(
-			avg_over_time(namespace:pvc_bytes_total:sum{$1}[1h])[$step:1h]
-		)
+		avg_over_time(namespace:pvc_bytes_total:sum{$1}[$step])
 	) by (persistentvolumeclaim, namespace)
 ) by (namespace)`,
 
@@ -527,10 +477,8 @@ round(
 	(
 		sum by (namespace, application) (
 			label_replace(
-				sum_over_time(
-					avg_over_time(
-						namespace:kube_workload_resource_request:sum{workload!~"Job:.+", resource="cpu", $1}[1h]
-					)[$step:1h]
+				avg_over_time(
+					namespace:kube_workload_resource_request:sum{workload!~"Job:.+", resource="cpu", $1}[$step]
 				),
 				"application",
 				"$app",
@@ -540,7 +488,7 @@ round(
 		) >=
 		sum by (namespace, application) (
 			label_replace(
-				sum_over_time(avg_over_time(namespace:workload_cpu_usage:sum{$1}[1h])[$step:1h]),
+				avg_over_time(namespace:workload_cpu_usage:sum{$1}[$step]),
 				"application",
 				"$app",
 				"",
@@ -552,7 +500,7 @@ round(
 	(
 		sum by (namespace, application) (
 			label_replace(
-				sum_over_time(avg_over_time(namespace:workload_cpu_usage:sum{$1}[1h])[$step:1h]),
+				avg_over_time(namespace:workload_cpu_usage:sum{$1}[$step]),
 				"application",
 				"$app",
 				"",
@@ -561,10 +509,8 @@ round(
 		) >
 		sum by (namespace, application) (
 			label_replace(
-				sum_over_time(
-					avg_over_time(
-						namespace:kube_workload_resource_request:sum{workload!~"Job:.+", resource="cpu", $1}[1h]
-					)[$step:1h]
+				avg_over_time(
+					namespace:kube_workload_resource_request:sum{workload!~"Job:.+", resource="cpu", $1}[$step]
 				),
 				"application",
 				"$app",
@@ -577,7 +523,7 @@ round(
 	(
 		sum by (namespace, application) (
 			label_replace(
-				sum_over_time(avg_over_time(namespace:workload_cpu_usage:sum{$1}[1h])[$step:1h]),
+				avg_over_time(namespace:workload_cpu_usage:sum{$1}[$step]),
 				"application",
 				"$app",
 				"",
@@ -593,10 +539,8 @@ round(
 	(
 		sum by (namespace, application) (
 			label_replace(
-				sum_over_time(
-					avg_over_time(
-						namespace:kube_workload_resource_request:sum{workload!~"Job:.+", resource="memory", $1}[1h]
-					)[$step:1h]
+				avg_over_time(
+					namespace:kube_workload_resource_request:sum{workload!~"Job:.+", resource="memory", $1}[$step]
 				),
 				"application",
 				"$app",
@@ -606,7 +550,7 @@ round(
 		) >=
 		sum by (namespace, application) (
 			label_replace(
-				sum_over_time(avg_over_time(namespace:workload_memory_usage_wo_cache:sum{$1}[1h])[$step:1h]),
+				avg_over_time(namespace:workload_memory_usage_wo_cache:sum{$1}[$step]),
 				"application",
 				"$app",
 				"",
@@ -618,7 +562,7 @@ round(
 	(
 		sum by (namespace, application) (
 			label_replace(
-				sum_over_time(avg_over_time(namespace:workload_memory_usage_wo_cache:sum{$1}[1h])[$step:1h]),
+				avg_over_time(namespace:workload_memory_usage_wo_cache:sum{$1}[$step]),
 				"application",
 				"$app",
 				"",
@@ -627,10 +571,8 @@ round(
 		) >
 		sum by (namespace, application) (
 			label_replace(
-				sum_over_time(
-					avg_over_time(
-						namespace:kube_workload_resource_request:sum{workload!~"Job:.+", resource="memory", $1}[1h]
-					)[$step:1h]
+				avg_over_time(
+					namespace:kube_workload_resource_request:sum{workload!~"Job:.+", resource="memory", $1}[$step]
 				),
 				"application",
 				"$app",
@@ -643,7 +585,7 @@ round(
 	(
 		sum by (namespace, application) (
 			label_replace(
-				sum_over_time(avg_over_time(namespace:workload_memory_usage_wo_cache:sum{$1}[1h])[$step:1h]),
+				avg_over_time(namespace:workload_memory_usage_wo_cache:sum{$1}[$step]),
 				"application",
 				"$app",
 				"",
@@ -658,10 +600,8 @@ round(
 round(
 	sum by (namespace, application) (
 		label_replace(
-			sum_over_time(
-				increase(
-					namespace:workload_net_bytes_transmitted:sum{$1}[1h]
-				)[$step:1h]
+			increase(
+				namespace:workload_net_bytes_transmitted:sum{$1}[$step]
 			),
 			"application",
 			"$app",
@@ -675,10 +615,8 @@ round(
 	"meter_application_net_bytes_received": `
 sum by (namespace, application) (
 	label_replace(
-		sum_over_time(
-			increase(
-				namespace:workload_net_bytes_received:sum{$1}[1h]
-			)[$step:1h]
+		increase(
+			namespace:workload_net_bytes_received:sum{$1}[$step]
 		),
 		"application",
 		"$app",
@@ -690,7 +628,7 @@ sum by (namespace, application) (
 	"meter_application_pvc_bytes_total": `
 sum by (namespace, application) (
 	label_replace(
-		topk(1, sum_over_time(avg_over_time(namespace:pvc_bytes_total:sum{$1}[1h])[$step:1h])) by (persistentvolumeclaim),
+		topk(1, avg_over_time(namespace:pvc_bytes_total:sum{$1}[$step])) by (persistentvolumeclaim),
 		"application",
 		"$app",
 		"",
@@ -703,37 +641,33 @@ sum by (namespace, application) (
 round(
 	(
 		sum by (namespace, workload) (
-			sum_over_time(
-				avg_over_time(
-					namespace:kube_workload_resource_request:sum{
-						workload!~"Job:.+", resource="cpu", $1
-					}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:kube_workload_resource_request:sum{
+					workload!~"Job:.+", resource="cpu", $1
+				}[$step]
 			)
 		) >=
 		sum by (namespace, workload) (
-			sum_over_time(avg_over_time(namespace:workload_cpu_usage:sum{$1}[1h])[$step:1h])
+			avg_over_time(namespace:workload_cpu_usage:sum{$1}[$step])
 		)
 	)
 	or
 	(
 		sum by (namespace, workload) (
-			sum_over_time(avg_over_time(namespace:workload_cpu_usage:sum{$1}[1h])[$step:1h])
+			avg_over_time(namespace:workload_cpu_usage:sum{$1}[$step])
 		) >
 		sum by (namespace, workload) (
-			sum_over_time(
-				avg_over_time(
-					namespace:kube_workload_resource_request:sum{
-						workload!~"Job:.+", resource="cpu", $1
-					}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:kube_workload_resource_request:sum{
+					workload!~"Job:.+", resource="cpu", $1
+				}[$step]
 			)
 		)
 	)
 	or
 	(
 		sum by (namespace, workload) (
-			sum_over_time(avg_over_time(namespace:workload_cpu_usage:sum{$1}[1h])[$step:1h])
+			avg_over_time(namespace:workload_cpu_usage:sum{$1}[$step])
 		)
 	),
 	0.001
@@ -743,37 +677,33 @@ round(
 round(
 	(
 		sum by (namespace, workload) (
-			sum_over_time(
-				avg_over_time(
-					namespace:kube_workload_resource_request:sum{
-						workload!~"Job:.+", resource="memory", $1
-					}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:kube_workload_resource_request:sum{
+					workload!~"Job:.+", resource="memory", $1
+				}[$step]
 			)
 		) >=
 		sum by (namespace, workload) (
-			sum_over_time(avg_over_time(namespace:workload_memory_usage_wo_cache:sum{$1}[1h])[$step:1h])
+			avg_over_time(namespace:workload_memory_usage_wo_cache:sum{$1}[$step])
 		)
 	)
 	or
 	(
 		sum by (namespace, workload) (
-			sum_over_time(avg_over_time(namespace:workload_memory_usage_wo_cache:sum{$1}[1h])[$step:1h])
+			avg_over_time(namespace:workload_memory_usage_wo_cache:sum{$1}[$step])
 		) >
 		sum by (namespace, workload) (
-			sum_over_time(
-				avg_over_time(
-					namespace:kube_workload_resource_request:sum{
-						workload!~"Job:.+", resource="memory", $1
-					}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:kube_workload_resource_request:sum{
+					workload!~"Job:.+", resource="memory", $1
+				}[$step]
 			)
 		)
 	)
 	or
 	(
 		sum by (namespace, workload) (
-			sum_over_time(avg_over_time(namespace:workload_memory_usage_wo_cache:sum{$1}[1h])[$step:1h])
+			avg_over_time(namespace:workload_memory_usage_wo_cache:sum{$1}[$step])
 		)
 	),
 	1
@@ -781,20 +711,16 @@ round(
 
 	"meter_workload_net_bytes_transmitted": `
 round(
-	sum_over_time(
-		increase(
-			namespace:workload_net_bytes_transmitted:sum{$1}[1h]
-		)[$step:1h]
+	increase(
+		namespace:workload_net_bytes_transmitted:sum{$1}[$step]
 	),
 	1
 )`,
 
 	"meter_workload_net_bytes_received": `
 round(
-	sum_over_time(
-		increase(
-			namespace:workload_net_bytes_received:sum{$1}[1h]
-		)[$step:1h]
+	increase(
+		namespace:workload_net_bytes_received:sum{$1}[$step]
 	),
 	1
 )`,
@@ -803,7 +729,7 @@ round(
 sum by (namespace, workload) (
 	topk(
 		1,
-		sum_over_time(avg_over_time(namespace:pvc_bytes_total:sum{$1}[1h])[$step:1h])
+		avg_over_time(namespace:pvc_bytes_total:sum{$1}[$step])
 	) by (persistentvolumeclaim, namespace, workload)
 )`,
 
@@ -813,18 +739,14 @@ round(
 	sum by (namespace, service) (
 		label_replace(
 			sum by (namespace, pod) (
-				sum_over_time(
-					avg_over_time(
-						namespace:kube_pod_resource_request:sum{owner_kind!="Job", resource="cpu", $1}[1h]
-					)[$step:1h]
+				avg_over_time(
+					namespace:kube_pod_resource_request:sum{owner_kind!="Job", resource="cpu", $1}[$step]
 				)
 			) >=
 			sum by (namespace, pod) (
 				sum by (namespace, pod) (
-					sum_over_time(
-						irate(
-							container_cpu_usage_seconds_total{job="kubelet", pod!="", image!=""}[1h]
-						)[$step:1h]
+					irate(
+						container_cpu_usage_seconds_total{job="kubelet", pod!="", image!=""}[$step]
 					)
 				) * on (namespace, pod) group_left(owner_kind, owner_name)
 				kube_pod_owner{} * on (namespace, pod) group_left(node)
@@ -841,19 +763,15 @@ round(
 		label_replace(
 			sum by (namespace, pod) (
 				sum by (namespace, pod) (
-					sum_over_time(
-						irate(
-							container_cpu_usage_seconds_total{job="kubelet", pod!="", image!=""}[1h]
-						)[$step:1h]
+					irate(
+						container_cpu_usage_seconds_total{job="kubelet", pod!="", image!=""}[$step]
 					)
 				) * on (namespace, pod) group_left(owner_kind, owner_name)
 				kube_pod_owner{} * on (namespace, pod) group_left(node)
 				kube_pod_info{$1}
 			) >
 			sum by (namespace, pod) (
-				sum_over_time(
-					avg_over_time(namespace:kube_pod_resource_request:sum{owner_kind!="Job", resource="cpu", $1}[1h])[$step:1h]
-				)
+				avg_over_time(namespace:kube_pod_resource_request:sum{owner_kind!="Job", resource="cpu", $1}[$step])
 			),
 			"service",
 			"$svc",
@@ -866,10 +784,8 @@ round(
 		label_replace(
 			sum by (namespace, pod) (
 				sum by (namespace, pod) (
-					sum_over_time(
-						irate(
-							container_cpu_usage_seconds_total{job="kubelet", pod!="", image!=""}[1h]
-						)[$step:1h]
+					irate(
+						container_cpu_usage_seconds_total{job="kubelet", pod!="", image!=""}[$step]
 					)
 				) * on (namespace, pod) group_left(owner_kind, owner_name)
 				kube_pod_owner{} * on (namespace, pod) group_left(node)
@@ -890,18 +806,14 @@ round(
 		sum by (namespace, service) (
 			label_replace(
 				sum by (namespace, pod) (
-					sum_over_time(
-						avg_over_time(
-							namespace:kube_pod_resource_request:sum{owner_kind!="Job", resource="memory", $1}[1h]
-						)[$step:1h]
+					avg_over_time(
+						namespace:kube_pod_resource_request:sum{owner_kind!="Job", resource="memory", $1}[$step]
 					)
 				) >=
 				sum by (namespace, pod) (
 					sum by (namespace, pod) (
-						sum_over_time(
-							avg_over_time(
-								container_memory_working_set_bytes{job="kubelet", pod!="", image!=""}[1h]
-							)[$step:1h]
+						avg_over_time(
+							container_memory_working_set_bytes{job="kubelet", pod!="", image!=""}[$step]
 						)
 					) * on (namespace, pod) group_left(owner_kind, owner_name)
 					kube_pod_owner{} * on (namespace, pod) group_left(node)
@@ -920,20 +832,16 @@ round(
 			label_replace(
 				sum by (namespace, pod) (
 					sum by (namespace, pod) (
-						sum_over_time(
-							avg_over_time(
-								container_memory_working_set_bytes{job="kubelet", pod!="", image!=""}[1h]
-							)[$step:1h]
+						avg_over_time(
+							container_memory_working_set_bytes{job="kubelet", pod!="", image!=""}[$step]
 						)
 					) * on (namespace, pod) group_left(owner_kind, owner_name)
 					kube_pod_owner{} * on (namespace, pod) group_left(node)
 					kube_pod_info{$1}
 				) >
 				sum by (namespace, pod) (
-					sum_over_time(
-						avg_over_time(
-							namespace:kube_pod_resource_request:sum{owner_kind!="Job", resource="memory", $1}[1h]
-						)[$step:1h]
+					avg_over_time(
+						namespace:kube_pod_resource_request:sum{owner_kind!="Job", resource="memory", $1}[$step]
 					)
 				),
 				"service",
@@ -949,10 +857,8 @@ round(
 			label_replace(
 				sum by (namespace, pod) (
 					sum by (namespace, pod) (
-						sum_over_time(
-							avg_over_time(
-								container_memory_working_set_bytes{job="kubelet", pod!="", image!=""}[1h]
-							)[$step:1h]
+						avg_over_time(
+							container_memory_working_set_bytes{job="kubelet", pod!="", image!=""}[$step]
 						)
 					) * on (namespace, pod) group_left(owner_kind, owner_name)
 					kube_pod_owner{} * on (namespace, pod) group_left(node)
@@ -974,14 +880,12 @@ round(
 		label_replace(
 			sum by (namespace, pod) (
 				sum by (namespace, pod) (
-					sum_over_time(
-						increase(
-							container_network_transmit_bytes_total{
-								pod!="",
-								interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", 
-								job="kubelet"
-							}[1h]
-						)[$step:1h]
+					increase(
+						container_network_transmit_bytes_total{
+							pod!="",
+							interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", 
+							job="kubelet"
+						}[$step]
 					)
 				) * on (namespace, pod) group_left(owner_kind, owner_name)
 				kube_pod_owner{} * on (namespace, pod) group_left(node)
@@ -1001,14 +905,12 @@ round(
 	label_replace(
 		sum by (namepace, pod) (
 			sum by (namespace, pod) (
-				sum_over_time(
-					increase(
-						container_network_receive_bytes_total{
-							pod!="",
-							interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
-							job="kubelet"
-						}[1h]
-					)[$step:1h]
+				increase(
+					container_network_receive_bytes_total{
+						pod!="",
+						interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
+						job="kubelet"
+					}[$step]
 				)
 			) * on (namespace, pod) group_left(owner_kind, owner_name)
 			kube_pod_owner{} * on (namespace, pod) group_left(node)
@@ -1027,13 +929,11 @@ round(
 round(
 	(
 		sum by (namespace, pod) (
-			sum_over_time(
-				avg_over_time(
-					namespace:kube_pod_resource_request:sum{
-						owner_kind!="Job",
-						resource="cpu",
-					}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:kube_pod_resource_request:sum{
+					owner_kind!="Job",
+					resource="cpu",
+				}[$step]
 			)
 		)
 		* on (namespace, pod) group_left(owner_kind, owner_name)
@@ -1041,9 +941,7 @@ round(
 		* on (namespace, pod) group_left(node)
 		kube_pod_info{$2} >=
 		sum by (namespace, pod) (
-			sum_over_time(
-				irate(container_cpu_usage_seconds_total{job="kubelet",pod!="",image!=""}[1h])[$step:1h]
-			)
+			irate(container_cpu_usage_seconds_total{job="kubelet",pod!="",image!=""}[$step])
 		)
 		* on (namespace, pod) group_left(owner_kind, owner_name)
 		kube_pod_owner{$1}
@@ -1053,20 +951,18 @@ round(
 	or
 	(
 		sum by (namespace, pod) (
-			sum_over_time(irate(container_cpu_usage_seconds_total{job="kubelet",pod!="",image!=""}[1h])[$step:1h])
+			irate(container_cpu_usage_seconds_total{job="kubelet",pod!="",image!=""}[$step])
 		)
 		* on (namespace, pod) group_left(owner_kind, owner_name)
 		kube_pod_owner{$1}
 		* on (namespace, pod) group_left(node)
 		kube_pod_info{$2} >
 		sum by (namespace, pod) (
-			sum_over_time(
-				avg_over_time(
-					namespace:kube_pod_resource_request:sum{
-						owner_kind!="Job",
-						resource="cpu",
-					}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:kube_pod_resource_request:sum{
+					owner_kind!="Job",
+					resource="cpu",
+				}[$step]
 			)
 		)
 		* on (namespace, pod) group_left(owner_kind, owner_name)
@@ -1077,7 +973,7 @@ round(
 	or
 	(
 		sum by (namespace, pod) (
-			sum_over_time(irate(container_cpu_usage_seconds_total{job="kubelet",pod!="",image!=""}[1h])[$step:1h])
+			irate(container_cpu_usage_seconds_total{job="kubelet",pod!="",image!=""}[$step])
 		)
 		* on (namespace, pod) group_left(owner_kind, owner_name)
 		kube_pod_owner{$1}
@@ -1091,13 +987,11 @@ round(
 round(
 	(
 		sum by (namespace, pod) (
-			sum_over_time(
-				avg_over_time(
-					namespace:kube_pod_resource_request:sum{
-						owner_kind!="Job",
-						resource="memory",
-					}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:kube_pod_resource_request:sum{
+					owner_kind!="Job",
+					resource="memory",
+				}[$step]
 			)
 		)
 		* on (namespace, pod) group_left(owner_kind, owner_name)
@@ -1105,9 +999,7 @@ round(
 		* on (namespace, pod) group_left(node)
 		kube_pod_info{$2} >=
 		sum by (namespace, pod) (
-			sum_over_time(
-				avg_over_time(container_memory_working_set_bytes{job="kubelet", pod!="", image!=""}[1h])[$step:1h]
-			)
+			avg_over_time(container_memory_working_set_bytes{job="kubelet", pod!="", image!=""}[$step])
 		)
 		* on (namespace, pod) group_left(owner_kind, owner_name)
 		kube_pod_owner{$1}
@@ -1117,21 +1009,18 @@ round(
 	or
 	(
 		sum by (namespace, pod) (
-			sum_over_time(
-				avg_over_time(container_memory_working_set_bytes{job="kubelet", pod!="", image!=""}[1h])[$step:1h])
-			)
-			* on (namespace, pod) group_left(owner_kind, owner_name)
-			kube_pod_owner{$1}
-			* on (namespace, pod) group_left(node)
-			kube_pod_info{$2} >
+			avg_over_time(container_memory_working_set_bytes{job="kubelet", pod!="", image!=""}[$step])
+		)
+		* on (namespace, pod) group_left(owner_kind, owner_name)
+		kube_pod_owner{$1}
+		* on (namespace, pod) group_left(node)
+		kube_pod_info{$2} >
 		sum by (namespace, pod) (
-			sum_over_time(
-				avg_over_time(
-					namespace:kube_pod_resource_request:sum{
-						owner_kind!="Job",
-						resource="memory",
-					}[1h]
-				)[$step:1h]
+			avg_over_time(
+				namespace:kube_pod_resource_request:sum{
+					owner_kind!="Job",
+					resource="memory",
+				}[$step]
 			)
 			* on (namespace, pod) group_left(owner_kind, owner_name)
 			kube_pod_owner{$1}
@@ -1142,7 +1031,7 @@ round(
 	or
 	(
 		sum by (namespace, pod) (
-			sum_over_time(avg_over_time(container_memory_working_set_bytes{job="kubelet", pod!="", image!=""}[1h])[$step:1h])
+			avg_over_time(container_memory_working_set_bytes{job="kubelet", pod!="", image!=""}[$step])
 		)
 		* on (namespace, pod) group_left(owner_kind, owner_name)
 		kube_pod_owner{$1}
@@ -1154,12 +1043,10 @@ round(
 
 	"meter_pod_net_bytes_transmitted": `
 sum by (namespace, pod) (
-	sum_over_time(
-		increase(
-			container_network_transmit_bytes_total{
-				pod!="", interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", job="kubelet"
-			}[1h]
-		)[$step:1h]
+	increase(
+		container_network_transmit_bytes_total{
+			pod!="", interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", job="kubelet"
+		}[$step]
 	)
 )
 * on (namespace, pod) group_left(owner_kind, owner_name) kube_pod_owner{$1}
@@ -1167,12 +1054,10 @@ sum by (namespace, pod) (
 
 	"meter_pod_net_bytes_received": `
 sum by (namespace, pod) (
-	sum_over_time(
-		increase(
-			container_network_receive_bytes_total{
-				pod!="", interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", job="kubelet"
-			}[1h]
-		)[$step:1h]
+	increase(
+		container_network_receive_bytes_total{
+			pod!="", interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", job="kubelet"
+		}[$step]
 	)
 )
 * on (namespace, pod) group_left(owner_kind, owner_name) kube_pod_owner{$1}
@@ -1180,7 +1065,7 @@ sum by (namespace, pod) (
 
 	"meter_pod_pvc_bytes_total": `
 sum by (namespace, pod) (
-	sum_over_time(avg_over_time(namespace:pvc_bytes_total:sum{}[1h])[$step:1h])
+	avg_over_time(namespace:pvc_bytes_total:sum{}[$step])
 )
 * on (namespace, pod) group_left(owner_kind, owner_name) kube_pod_owner{$1}
 * on (namespace, pod) group_left(node) kube_pod_info{$2}`,

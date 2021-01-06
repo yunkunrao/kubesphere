@@ -183,7 +183,7 @@ func getFeeWithMeterName(meterName string, sum float64) float64 {
 	}
 }
 
-func updateMetricStatData(metric monitoring.Metric, scalingFactor float64) monitoring.MetricData {
+func updateMetricStatData(metric monitoring.Metric, scalingMap map[string]float64) monitoring.MetricData {
 	metricName := metric.MetricName
 	metricData := metric.MetricData
 	for index, metricValue := range metricData.MetricValues {
@@ -195,16 +195,21 @@ func updateMetricStatData(metric monitoring.Metric, scalingFactor float64) monit
 			points = append(points, *metricValue.Sample)
 		}
 
+		var factor float64 = 1
+		if scalingMap != nil {
+			factor = scalingMap[metricName]
+		}
+
 		if len(points) == 1 {
 			sample := points[0]
-			sum := sample[1] * scalingFactor
+			sum := sample[1] * factor
 			metricData.MetricValues[index].MinValue = sample[1]
 			metricData.MetricValues[index].MaxValue = sample[1]
 			metricData.MetricValues[index].AvgValue = sample[1]
 			metricData.MetricValues[index].SumValue = sum
 			metricData.MetricValues[index].Fee = getFeeWithMeterName(metricName, sum)
 		} else {
-			sum := getSumPointValue(points) * scalingFactor
+			sum := getSumPointValue(points) * factor
 			metricData.MetricValues[index].MinValue = getMinPointValue(points)
 			metricData.MetricValues[index].MaxValue = getMaxPointValue(points)
 			metricData.MetricValues[index].AvgValue = getAvgPointValue(points)
