@@ -959,6 +959,7 @@ round(
 				namespace:kube_pod_resource_request:sum{
 					owner_kind!="Job",
 					resource="cpu",
+					$internalPodSelector
 				}[$step]
 			)
 		)
@@ -967,7 +968,7 @@ round(
 		* on (namespace, pod) group_left(node)
 		kube_pod_info{$2} >=
 		sum by (namespace, pod) (
-			irate(container_cpu_usage_seconds_total{job="kubelet",pod!="",image!=""}[$step])
+			irate(container_cpu_usage_seconds_total{job="kubelet",pod!="",image!="", $internalPodSelector}[$step])
 		)
 		* on (namespace, pod) group_left(owner_kind, owner_name)
 		kube_pod_owner{$1}
@@ -977,7 +978,7 @@ round(
 	or
 	(
 		sum by (namespace, pod) (
-			irate(container_cpu_usage_seconds_total{job="kubelet",pod!="",image!=""}[$step])
+			irate(container_cpu_usage_seconds_total{job="kubelet",pod!="",image!="", $internalPodSelector}[$step])
 		)
 		* on (namespace, pod) group_left(owner_kind, owner_name)
 		kube_pod_owner{$1}
@@ -988,6 +989,7 @@ round(
 				namespace:kube_pod_resource_request:sum{
 					owner_kind!="Job",
 					resource="cpu",
+					$internalPodSelector
 				}[$step]
 			)
 		)
@@ -999,7 +1001,7 @@ round(
 	or
 	(
 		sum by (namespace, pod) (
-			irate(container_cpu_usage_seconds_total{job="kubelet",pod!="",image!=""}[$step])
+			irate(container_cpu_usage_seconds_total{job="kubelet",pod!="",image!="", $internalPodSelector}[$step])
 		)
 		* on (namespace, pod) group_left(owner_kind, owner_name)
 		kube_pod_owner{$1}
@@ -1017,6 +1019,7 @@ round(
 				namespace:kube_pod_resource_request:sum{
 					owner_kind!="Job",
 					resource="memory",
+					$internalPodSelector
 				}[$step]
 			)
 		)
@@ -1025,7 +1028,7 @@ round(
 		* on (namespace, pod) group_left(node)
 		kube_pod_info{$2} >=
 		sum by (namespace, pod) (
-			avg_over_time(container_memory_working_set_bytes{job="kubelet", pod!="", image!=""}[$step])
+			avg_over_time(container_memory_working_set_bytes{job="kubelet", pod!="", image!="", $internalPodSelector}[$step])
 		)
 		* on (namespace, pod) group_left(owner_kind, owner_name)
 		kube_pod_owner{$1}
@@ -1035,7 +1038,7 @@ round(
 	or
 	(
 		sum by (namespace, pod) (
-			avg_over_time(container_memory_working_set_bytes{job="kubelet", pod!="", image!=""}[$step])
+			avg_over_time(container_memory_working_set_bytes{job="kubelet", pod!="", image!="", $internalPodSelector}[$step])
 		)
 		* on (namespace, pod) group_left(owner_kind, owner_name)
 		kube_pod_owner{$1}
@@ -1046,6 +1049,7 @@ round(
 				namespace:kube_pod_resource_request:sum{
 					owner_kind!="Job",
 					resource="memory",
+					$internalPodSelector
 				}[$step]
 			)
 			* on (namespace, pod) group_left(owner_kind, owner_name)
@@ -1057,7 +1061,7 @@ round(
 	or
 	(
 		sum by (namespace, pod) (
-			avg_over_time(container_memory_working_set_bytes{job="kubelet", pod!="", image!=""}[$step])
+			avg_over_time(container_memory_working_set_bytes{job="kubelet", pod!="", image!="", $internalPodSelector}[$step])
 		)
 		* on (namespace, pod) group_left(owner_kind, owner_name)
 		kube_pod_owner{$1}
@@ -1071,7 +1075,7 @@ round(
 sum by (namespace, pod) (
 	increase(
 		container_network_transmit_bytes_total{
-			pod!="", interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", job="kubelet"
+			pod!="", interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", job="kubelet", $internalPodSelector
 		}[$step]
 	) / $factor
 )
@@ -1082,7 +1086,7 @@ sum by (namespace, pod) (
 sum by (namespace, pod) (
 	increase(
 		container_network_receive_bytes_total{
-			pod!="", interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", job="kubelet"
+			pod!="", interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", job="kubelet", $internalPodSelector
 		}[$step]
 	) / $factor
 )
@@ -1091,7 +1095,7 @@ sum by (namespace, pod) (
 
 	"meter_pod_pvc_bytes_total": `
 sum by (namespace, pod) (
-	avg_over_time(namespace:pvc_bytes_total:sum{}[$step])
+	avg_over_time(namespace:pvc_bytes_total:sum{$internalPodSelector}[$step])
 )
 * on (namespace, pod) group_left(owner_kind, owner_name) kube_pod_owner{$1}
 * on (namespace, pod) group_left(node) kube_pod_info{$2}`,
@@ -1184,6 +1188,22 @@ func makeServiceMeterExpr(tmpl string, o monitoring.QueryOptions) string {
 }
 
 func makePodMeterExpr(tmpl string, o monitoring.QueryOptions) string {
+
+	// here we support internal pod selector to accelerate metering pod filter operation, otherwise we will iterate
+	// pod in cluster scope which required longer time
+	var internalPodSelector string
+	if o.PodName != "" {
+		internalPodSelector += fmt.Sprintf(`pod="%s", `, o.PodName)
+	}
+	if o.ResourceFilter != "" {
+		internalPodSelector += fmt.Sprintf(`pod=~"%s", `, o.ResourceFilter)
+	}
+	if o.NamespaceName != "" {
+		internalPodSelector += fmt.Sprintf(`namespace="%s"`, o.NamespaceName)
+	}
+
+	tmpl = strings.NewReplacer("$internalPodSelector", internalPodSelector).Replace(tmpl)
+
 	return makePodMetricExpr(tmpl, o)
 }
 
