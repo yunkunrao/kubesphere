@@ -340,13 +340,7 @@ func generateScalingFactorMap(step time.Duration) map[string]float64 {
 	scalingMap := make(map[string]float64)
 
 	for k := range MeterResourceMap {
-		if strings.Contains(k, "_cpu_usage") ||
-			strings.Contains(k, "_memory_usage") ||
-			strings.Contains(k, "_pvc_bytes_total") {
-			scalingMap[k] = step.Hours()
-		} else {
-			scalingMap[k] = 1
-		}
+		scalingMap[k] = step.Hours()
 	}
 	return scalingMap
 }

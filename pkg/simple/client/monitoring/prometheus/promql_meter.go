@@ -80,6 +80,7 @@ round(
 	1
 )`,
 
+	// avg over time manually
 	"meter_cluster_net_bytes_transmitted": `
 round(
 	sum(
@@ -89,10 +90,11 @@ round(
 				device!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)"
 			}[$step]
 		)
-	),
+	) / $factor,
 	1
 )`,
 
+	// avg over time manually
 	"meter_cluster_net_bytes_received": `
 round(
 	sum(
@@ -102,7 +104,7 @@ round(
 				device!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)"
 			}[$step]
 		)
-	),
+	) / $factor,
 	1
 )`,
 
@@ -174,6 +176,7 @@ round(
 	0.001
 )`,
 
+	// avg over time manually
 	"meter_node_net_bytes_transmitted": `
 round(
 	sum by (node) (
@@ -192,10 +195,11 @@ round(
 				"(.*)"
 			)
 		)
-	),
+	) / $factor,
 	1
 )`,
 
+	// avg over time manually
 	"meter_node_net_bytes_received": `
 round(
 	sum by (node) (
@@ -214,7 +218,7 @@ round(
 				"(.*)"
 			)
 		)
-	),
+	) / $factor,
 	1
 )`,
 
@@ -310,37 +314,46 @@ round(
 	1
 )`,
 
+	// avg over time manually
 	"meter_workspace_net_bytes_transmitted": `
 round(
-	sum by (workspace) (
-		sum by (namespace) (
-			increase(
-				container_network_transmit_bytes_total{
-					namespace!="",
-					pod!="",
-					interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
-					job="kubelet"
-				}[$step]
-			)
-		) * on (namespace) group_left(workspace)
-		kube_namespace_labels{$1}
-	) or on(workspace) max by(workspace) (kube_namespace_labels{$1} * 0), 1)`,
+	(
+		sum by (workspace) (
+			sum by (namespace) (
+				increase(
+					container_network_transmit_bytes_total{
+						namespace!="",
+						pod!="",
+						interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
+						job="kubelet"
+					}[$step]
+				)
+			) * on (namespace) group_left(workspace)
+			kube_namespace_labels{$1}
+		) or on(workspace) max by(workspace) (kube_namespace_labels{$1} * 0)
+	) / $factor, 
+	1
+)`,
 
 	"meter_workspace_net_bytes_received": `
 round(
-	sum by (workspace) (
-		sum by (namespace) (
-			increase(
-				container_network_receive_bytes_total{
-					namespace!="",
-					pod!="",
-					interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
-					job="kubelet"
-				}[$step]
-			)
-		) * on (namespace) group_left(workspace)
-		kube_namespace_labels{$1}
-	) or on(workspace) max by(workspace) (kube_namespace_labels{$1} * 0), 1)`,
+	(
+		sum by (workspace) (
+			sum by (namespace) (
+				increase(
+					container_network_receive_bytes_total{
+						namespace!="",
+						pod!="",
+						interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
+						job="kubelet"
+					}[$step]
+				)
+			) * on (namespace) group_left(workspace)
+			kube_namespace_labels{$1}
+		) or on(workspace) max by(workspace) (kube_namespace_labels{$1} * 0)
+	) / $factor, 
+	1
+)`,
 
 	"meter_workspace_pvc_bytes_total": `
 sum (
@@ -433,35 +446,43 @@ round(
 
 	"meter_namespace_net_bytes_transmitted": `
 round(
-	sum by (namespace) (
-		increase(
-			container_network_transmit_bytes_total{
-				namespace!="",
-				pod!="",
-				interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
-				job="kubelet"
-			}[$step]
+	(
+		sum by (namespace) (
+			increase(
+				container_network_transmit_bytes_total{
+					namespace!="",
+					pod!="",
+					interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
+					job="kubelet"
+				}[$step]
+			)
+			* on (namespace) group_left(workspace)
+			kube_namespace_labels{$1}
 		)
-		* on (namespace) group_left(workspace)
-		kube_namespace_labels{$1}
-	)
-	or on(namespace) max by(namespace) (kube_namespace_labels{$1} * 0), 1)`,
+		or on(namespace) max by(namespace) (kube_namespace_labels{$1} * 0)
+	) / $factor, 
+	1
+)`,
 
 	"meter_namespace_net_bytes_received": `
 round(
-	sum by (namespace) (
-		increase(
-			container_network_receive_bytes_total{
-				namespace!="",
-				pod!="",
-				interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
-				job="kubelet"
-			}[$step]
+	(
+		sum by (namespace) (
+			increase(
+				container_network_receive_bytes_total{
+					namespace!="",
+					pod!="",
+					interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
+					job="kubelet"
+				}[$step]
+			)
+			* on (namespace) group_left(workspace)
+			kube_namespace_labels{$1}
 		)
-		* on (namespace) group_left(workspace)
-		kube_namespace_labels{$1}
-	)
-	or on(namespace) max by(namespace) (kube_namespace_labels{$1} * 0), 1)`,
+		or on(namespace) max by(namespace) (kube_namespace_labels{$1} * 0)
+	) / $factor, 
+	1
+)`,
 
 	"meter_namespace_pvc_bytes_total": `
 sum (
@@ -608,21 +629,24 @@ round(
 			"",
 			""
 		)
-	),
+	) / $factor,
 	1
 )`,
 
 	"meter_application_net_bytes_received": `
-sum by (namespace, application) (
-	label_replace(
-		increase(
-			namespace:workload_net_bytes_received:sum{$1}[$step]
-		),
-		"application",
-		"$app",
-		"",
-		""
-	)
+round(
+	sum by (namespace, application) (
+		label_replace(
+			increase(
+				namespace:workload_net_bytes_received:sum{$1}[$step]
+			),
+			"application",
+			"$app",
+			"",
+			""
+		)
+	) / $factor,
+	1
 )`,
 
 	"meter_application_pvc_bytes_total": `
@@ -713,7 +737,7 @@ round(
 round(
 	increase(
 		namespace:workload_net_bytes_transmitted:sum{$1}[$step]
-	),
+	) / $factor,
 	1
 )`,
 
@@ -721,7 +745,7 @@ round(
 round(
 	increase(
 		namespace:workload_net_bytes_received:sum{$1}[$step]
-	),
+	) / $factor,
 	1
 )`,
 
@@ -896,31 +920,33 @@ round(
 			"",
 			""
 		)
-	),
+	) / $factor,
 	1
 )`,
 
 	"meter_service_net_bytes_received": `
 round(
-	label_replace(
-		sum by (namepace, pod) (
-			sum by (namespace, pod) (
-				increase(
-					container_network_receive_bytes_total{
-						pod!="",
-						interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
-						job="kubelet"
-					}[$step]
-				)
-			) * on (namespace, pod) group_left(owner_kind, owner_name)
-			kube_pod_owner{} * on (namespace, pod) group_left(node)
-			kube_pod_info{$1}
-		),
-		"service",
-		"$svc",
-		"",
-		""
-	),
+	sum by (namespace, service) (
+		label_replace(
+			sum by (namepace, pod) (
+				sum by (namespace, pod) (
+					increase(
+						container_network_receive_bytes_total{
+							pod!="",
+							interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)",
+							job="kubelet"
+						}[$step]
+					)
+				) * on (namespace, pod) group_left(owner_kind, owner_name)
+				kube_pod_owner{} * on (namespace, pod) group_left(node)
+				kube_pod_info{$1}
+			),
+			"service",
+			"$svc",
+			"",
+			""
+		)
+	) / $factor,
 	1
 )`,
 
@@ -1047,7 +1073,7 @@ sum by (namespace, pod) (
 		container_network_transmit_bytes_total{
 			pod!="", interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", job="kubelet"
 		}[$step]
-	)
+	) / $factor
 )
 * on (namespace, pod) group_left(owner_kind, owner_name) kube_pod_owner{$1}
 * on (namespace, pod) group_left(node) kube_pod_info{$2}`,
@@ -1058,7 +1084,7 @@ sum by (namespace, pod) (
 		container_network_receive_bytes_total{
 			pod!="", interface!~"^(cali.+|tunl.+|dummy.+|kube.+|flannel.+|cni.+|docker.+|veth.+|lo.*)", job="kubelet"
 		}[$step]
-	)
+	) / $factor
 )
 * on (namespace, pod) group_left(owner_kind, owner_name) kube_pod_owner{$1}
 * on (namespace, pod) group_left(node) kube_pod_info{$2}`,
@@ -1124,6 +1150,7 @@ func renderMeterTemplate(tmpl string, o monitoring.QueryOptions) string {
 	tmpl = replaceInstanceSelector(tmpl, o)
 	tmpl = replaceAppSelector(tmpl, o)
 	tmpl = replaceSvcSelector(tmpl, o)
+	tmpl = replaceFactor(tmpl, o)
 
 	return tmpl
 }
@@ -1213,6 +1240,12 @@ func replacePVCSelector(tmpl string, o monitoring.QueryOptions) string {
 		return tmpl
 	}
 	return strings.Replace(tmpl, "$pvc", strings.Join(filterConditions, ","), -1)
+}
+
+func replaceFactor(tmpl string, o monitoring.QueryOptions) string {
+	stepStr := strconv.Itoa(int(o.MeterOptions.Step.Hours()))
+
+	return strings.Replace(tmpl, "$factor", stepStr, -1)
 }
 
 func replaceStepSelector(tmpl string, o monitoring.QueryOptions) string {
