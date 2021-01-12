@@ -72,6 +72,8 @@ func (h *tenantHandler) HandlePriceInfoQuery(req *restful.Request, resp *restful
 		return
 	}
 
+	priceInfoResponse.RetentionDay = meterConfig.RetentionDay
+
 	priceInfo := meterConfig.GetPriceInfo()
 	priceInfoResponse.Currency = "CNY"
 	priceInfoResponse.CpuPerCorePerHour = priceInfo.CpuPerCorePerHour

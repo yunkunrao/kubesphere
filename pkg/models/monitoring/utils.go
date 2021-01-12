@@ -74,7 +74,8 @@ type Billing struct {
 }
 
 type MeterConfig struct {
-	Billing Billing `json:"billing" yaml:"billing"`
+	RetentionDay string  `json:"retentionDay" yaml:"retentionDay"`
+	Billing      Billing `json:"billing" yaml:"billing"`
 }
 
 func (mc MeterConfig) GetPriceInfo() PriceInfo {

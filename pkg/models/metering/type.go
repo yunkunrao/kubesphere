@@ -1,6 +1,7 @@
 package metering
 
 type PriceInfo struct {
+	RetentionDay                              string  `json:"retention_day" desciption:"retention day"`
 	Currency                                  string  `json:"currency" description:"currency"`
 	CpuPerCorePerHour                         float64 `json:"cpu_per_core_per_hour,omitempty" description:"cpu price"`
 	MemPerGigabytesPerHour                    float64 `json:"mem_per_gigabytes_per_hour,omitempty" description:"mem price"`
