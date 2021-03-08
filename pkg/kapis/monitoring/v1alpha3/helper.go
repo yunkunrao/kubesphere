@@ -388,10 +388,62 @@ func ExportMetrics(resp *restful.Response, metrics model.Metrics) {
 		}
 	}
 
-	resBytes, err := csvutil.Marshal(metrics.Results)
-	if err != nil {
-		api.HandleBadRequest(resp, nil, err)
-		return
+	var err error
+	var resBytes []byte
+
+	for _, metric := range metrics.Results {
+
+		metricName := metric.MetricName
+
+		var pList []monitoring.CSVPoint
+		for _, metricVal := range metric.MetricValues {
+
+			var targetList []string
+			for k, v := range metricVal.Metadata {
+				targetList = append(targetList, fmt.Sprintf("%s=%s", k, v))
+			}
+			selector := strings.Join(targetList, "|")
+
+			var startTime, endTime string
+			if len(metricVal.ExportedSeries) > 0 {
+				startTime = metricVal.ExportedSeries[0].Timestamp()
+				endTime = metricVal.ExportedSeries[len(metricVal.ExportedSeries)-1].Timestamp()
+			}
+
+			statsTab := "\nmetric_name,selector,start_time,end_time,min,max,avg,sum,fee, currency_unit\n" +
+				fmt.Sprintf("%s,%s,%s,%s,%.2f,%.2f,%.2f,%.2f,%.2f,%s\n\n",
+					metricName,
+					selector,
+					startTime,
+					endTime,
+					metricVal.MinValue,
+					metricVal.MaxValue,
+					metricVal.AvgValue,
+					metricVal.SumValue,
+					metricVal.Fee,
+					metricVal.CurrencyUnit)
+
+			pList = nil
+			resourceUnit := metricVal.ResourceUnit
+			for _, p := range metricVal.ExportedSeries {
+				pList = append(pList, p.TransformToCSVPoint(metricName, selector, resourceUnit))
+			}
+
+			dataTab, err := csvutil.Marshal(pList)
+			if err != nil {
+				api.HandleBadRequest(resp, nil, err)
+				return
+			}
+
+			resBytes = append(resBytes, statsTab...)
+			resBytes = append(resBytes, dataTab...)
+
+		}
+
+		if err != nil {
+			api.HandleBadRequest(resp, nil, err)
+			return
+		}
 	}
 
 	output := new(bytes.Buffer)
