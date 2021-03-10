@@ -216,6 +216,52 @@ func TestParseRequestParams(t *testing.T) {
 			},
 			expectedErr: false,
 		},
+		{
+			params: reqParams{
+				time:      "1585830000",
+				operation: OperationQuery,
+			},
+			lvl: monitoring.LevelApplication,
+			expected: queryOptions{
+				time:      time.Unix(1585830000, 0),
+				page:      1,
+				limit:     10,
+				Operation: OperationQuery,
+			},
+			expectedErr: true,
+		},
+		{
+			params: reqParams{
+				start:         "1585880000",
+				end:           "1585830000",
+				operation:     OperationQuery,
+				namespaceName: "default",
+			},
+			lvl: monitoring.LevelApplication,
+			expected: queryOptions{
+				time:      time.Unix(1585830000, 0),
+				page:      1,
+				limit:     10,
+				Operation: OperationQuery,
+			},
+			expectedErr: true,
+		},
+		{
+			params: reqParams{
+				target:        "meter_service_cpu_usage",
+				time:          "1585880000",
+				operation:     OperationQuery,
+				namespaceName: "default",
+			},
+			lvl: monitoring.LevelService,
+			expected: queryOptions{
+				time:      time.Unix(1585830000, 0),
+				page:      1,
+				limit:     10,
+				Operation: OperationQuery,
+			},
+			expectedErr: true,
+		},
 	}
 
 	for i, tt := range tests {
