@@ -34,6 +34,7 @@ import (
 	"kubesphere.io/kubesphere/pkg/simple/client/kubeedge"
 	"kubesphere.io/kubesphere/pkg/simple/client/ldap"
 	"kubesphere.io/kubesphere/pkg/simple/client/logging"
+	"kubesphere.io/kubesphere/pkg/simple/client/metering"
 	"kubesphere.io/kubesphere/pkg/simple/client/monitoring/prometheus"
 	"kubesphere.io/kubesphere/pkg/simple/client/multicluster"
 	"kubesphere.io/kubesphere/pkg/simple/client/network"
@@ -164,6 +165,7 @@ func newTestConfig() (*Config, error) {
 		KubeEdgeOptions: &kubeedge.Options{
 			Endpoint: "http://edge-watcher.kubeedge.svc/api/",
 		},
+		MeteringOptions: &metering.Options{},
 	}
 	return conf, nil
 }
